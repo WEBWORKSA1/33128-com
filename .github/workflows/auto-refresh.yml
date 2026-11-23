@@ -1,0 +1,29 @@
+name: Auto-refresh site
+on:
+  schedule:
+    - cron: "17 9 * * *"   # daily, 09:17 UTC
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["tools/**"]
+permissions:
+  contents: write
+concurrency:
+  group: auto-refresh
+  cancel-in-progress: false
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Rebuild pages, sitemap and daily tip
+        run: python3 tools/refresh.py
+      - name: Commit changes
+        run: |
+          git config user.name "33128-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then echo "No changes"; else git commit -m "Auto-refresh: $(date -u +%F)" && git push; fi
